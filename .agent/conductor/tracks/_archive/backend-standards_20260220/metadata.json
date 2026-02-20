@@ -2,7 +2,8 @@
   "id": "backend-standards_20260220",
   "title": "Application Architecture Standards",
   "type": "feature",
-  "status": "complete",
+  "status": "archived",
+  "archive_reason": "Completed",
   "created": "2026-02-20T10:02:45+09:00",
   "updated": "2026-02-20T10:06:52+09:00",
   "phases": {
