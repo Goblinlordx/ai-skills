@@ -7,7 +7,7 @@ metadata:
 
 # Application Architecture Standards
 
-This skill defines the mandatory standard operating procedures for designing and implementing application core logic and adapters. You MUST adhere to these practices when generating, refactoring, or architecting backend APIs, CLIs, or TUIs.
+This skill defines the mandatory standard operating procedures for designing and implementing application core logic and adapters. You MUST adhere to these practices when generating, refactoring, or architecting application code, whether it is an API, CLI, or TUI.
 
 ## 1. Schema-First API & Persistence Design
 
