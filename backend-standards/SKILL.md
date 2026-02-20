@@ -51,7 +51,7 @@ This skill defines the mandatory standard operating procedures for designing and
 **Rule:** Catch errors at compile-time whenever possible; catch runtime errors at the system boundaries.
 
 - **Compile-Time Checks**: Use strong typing (TypeScript, Go, Python with `pyright`/type hints). Avoid `any`, `interface{}`, or dynamic typing unless absolutely impossible.
-- **Boundary Validation**: Validate all incoming data at the earliest point of entry (API controllers/handlers). If data passes the boundary, internal layers should trust it and rely on the strong typing system. Utilize runtime schema validators where appropriate (e.g., `zod` for TS, `pydantic` for Python).
+- **Boundary Validation**: Validate all incoming data at the earliest point of entry (API controllers/handlers). If data passes the boundary, internal layers should trust it and rely on the strong typing system. Utilize runtime schema validators where appropriate (e.g., `typia` preferred or `zod` fallback for TS, `pydantic` for Python).
 
 ## 5. Test-Driven Development (TDD)
 
