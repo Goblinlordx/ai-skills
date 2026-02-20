@@ -37,8 +37,8 @@ This skill defines the mandatory standard operating procedures for designing and
 - **Dependencies point inward**:
   - `Domain` layer (Entities, Value Objects) depends on nothing.
   - `Application` layer (Use Cases, `Ports`/Interfaces) depends only on `Domain`.
-  - `Presentation` / **Driving Adapters** (Input): The layer that _drives_ the application (e.g., REST/GraphQL APIs, CLI commands, TUIs, Pub/Sub message listeners). This layer translates external input into calls to the `Application` layer.
-  - `Infrastructure` / **Driven Adapters** (Output): The layer that is _driven by_ the application (e.g., Databases, Object Storage, Pub/Sub publishers, external 3rd-party APIs). This layer implements the output `Ports` defined by the `Application`.
+  - `Presentation` / **Ingress Adapters** (commonly known as Driving): The layer that _drives_ the application (e.g., REST/GraphQL APIs, CLI commands, TUIs, Pub/Sub message listeners). This layer translates external input into calls to the `Application` layer.
+  - `Infrastructure` / **Egress Adapters** (commonly known as Driven): The layer that is _driven by_ the application (e.g., Databases, Object Storage, Pub/Sub publishers, external 3rd-party APIs). This layer implements the output `Ports` defined by the `Application`.
 - **Treat all external systems equally**: A database is just one type of external infrastructure. Message brokers (Pub/Sub) and Object Storage (S3, etc.) must also be treated as infrastructure and tightly hidden behind Ports (interfaces) defined by the Application layer.
 - **Prevent Domain Leakage via Adapters**: Infrastructure layers must NEVER leak into the domain. Do not let ORM-specific models, cloud SDK-specific types (e.g., AWS S3 objects), annotations, or query objects (e.g., `IQueryable`) enter the domain logic.
   - The `Application` or `Domain` layer defines a pure interface (Port).
