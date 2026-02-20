@@ -2,6 +2,6 @@
 
 | Status | Track ID                   | Title                   | Created    | Updated    |
 | ------ | -------------------------- | ----------------------- | ---------- | ---------- |
-| [~]    | backend-standards_20260220 | Backend Standards Skill | 2026-02-20 | 2026-02-20 |
+| [x]    | backend-standards_20260220 | Backend Standards Skill | 2026-02-20 | 2026-02-20 |
 
 <!-- Tracks registered by /conductor-new-track -->
