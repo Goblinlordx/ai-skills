@@ -42,7 +42,7 @@ This skill defines the mandatory standard operating procedures for designing and
   - The `Infrastructure` layer implements the repository (Adapter). The repository is strictly responsible for mapping the generated persistence types (from `sqlc`, an ORM, etc.) into the pure Domain Entities.
 - **Dependency Injection (Compile-Time Preferred)**: Always inject dependencies (Repositories, external services) via interfaces into the Application/Use Case layer. Avoid hardcoding infrastructure implementations inside business logic.
   - **Crucial Rule**: Strongly prefer compile-time, transpile-time, or strict static-analysis-time DI mechanisms over runtime reflection. Fail builds early instead of encountering runtime resolution faults.
-  - **Go**: Use compile-time DI generation tools like `google/wire`.
+  - **Go**: Use compile-time DI generation tools like `goforj/wire` (favor over the unmaintained `google/wire`).
   - **TypeScript**: Use compile-time DI frameworks like `Clawject`, or fall back to native Constructor/Pure DI. Avoid decorators that rely heavily on runtime `reflect-metadata`.
   - **Python**: Use Constructor/Pure DI (manual wiring at the composition root), or carefully configured statically-analyzable containers (e.g., `Dependency Injector` rigidly checked by `pyright`) avoiding dangerous dynamic runtime overrides.
 
