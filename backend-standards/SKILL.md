@@ -15,6 +15,7 @@ This skill defines the mandatory standard operating procedures for designing and
 
 - **API Layer**: Define APIs using OpenAPI (Swagger) for REST or GraphQL SDL for GraphQL.
 - **Persistence Layer**: Define database schemas (e.g. SQL migrations, Prisma schema, or equivalent) before writing database access code. You are not strictly required to use SQL, but the schema must be explicitly defined.
+- **Migrations**: Ensure that proper schema and migration support tooling (e.g. `golang-migrate`, Prisma Migrations, Alembic) is integrated into the project _early_ so that the persistence layer can evolve safely over time.
 - **Code Generation**: Aggressively leverage code generation tools to produce type-safe code directly from the schemas.
   - For APIs: Use tools like `oapi-codegen` for Go, or OpenAPI Generator for TypeScript/Python.
   - For Persistence: Use tools like `sqlc` for Go, `Prisma` for TypeScript, and `sqlacodegen` or `prisma-client-py` for Python to generate strict types and query functions from your schemas.
