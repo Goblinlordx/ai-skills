@@ -1,4 +1,4 @@
-# Track: Backend Standards Skill
+# Track: Application Architecture Standards
 
 **ID:** backend-standards_20260220
 **Status:** Pending

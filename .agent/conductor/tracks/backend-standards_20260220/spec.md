@@ -1,4 +1,4 @@
-# Specification: Backend Standards Skill
+# Specification: Application Architecture Standards
 
 **Track ID:** backend-standards_20260220
 **Type:** Feature
@@ -11,13 +11,11 @@ Generate a new skill for building backend systems, establishing standards and gu
 
 ## Context
 
-**Product Context:** Reusing common workflows and tasks in AI coding assistants, and establishing standard operating procedures for an AI coding assistant.
-**Target Users:** AI Agents running tasks.
-**Key Goals:** Provide a consistent set of standards for projects when using languages I commonly use. Specifically, golang, typescript, and python.
+**Product Context:** Reusing common workflowThis track focuses on creating a new skill for Gemini Antigravity that establishes strict standard operating procedures (SOPs) for application architecture and development. The skill will provide detailed instructions for agents to follow when generating, refactoring, or architecting backend applications (APIs, CLIs, TUIs) across Go, TypeScript, and Python.
 
-## User Story
+## Context
 
-As an AI, I want to have instructions such that I can design and build easily exposable, easily managable, and easily deployable applications so that I can reliably build backend systems using a schema-first approach, code generation, Domain-Driven Design (DDD), Test-Driven Development (TDD), Clean/Hexagonal architecture, dependency injection, and strong typing with compile-time checks and boundary validation.
+Currently, when tasked with backend-related work, AI agents might use varying architectural patterns, naming conventions, and testing strategies. This inconsistency makes the generated code harder to maintain and integrate into existing, well-structured projects. By defining a specific "Application Architecture Standards" skill, we can ensure agents adhere to modern, rigorous development practices, resulting in higher-quality, more predictable outputs.ild backend systems using a schema-first approach, code generation, Domain-Driven Design (DDD), Test-Driven Development (TDD), Clean/Hexagonal architecture, dependency injection, and strong typing with compile-time checks and boundary validation.
 
 ## Acceptance Criteria
 

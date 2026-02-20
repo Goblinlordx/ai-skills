@@ -1,13 +1,13 @@
 ---
-name: backend-standards
-description: Enforce strict backend development standards including Schema-First design, Clean Architecture, Domain-Driven Design (DDD), and Test-Driven Development (TDD) for Go, TypeScript, and Python projects.
+name: application-architecture-standards
+description: Enforce strict application architecture standards including Schema-First design, Clean Architecture, Domain-Driven Design (DDD), and Test-Driven Development (TDD) for API, CLI, and TUI applications using Go, TypeScript, and Python.
 metadata:
   version: "1.0"
 ---
 
-# Backend Standards
+# Application Architecture Standards
 
-This skill defines the mandatory standard operating procedures for designing and implementing backend services. You MUST adhere to these practices when generating, refactoring, or architecting backend code.
+This skill defines the mandatory standard operating procedures for designing and implementing application core logic and adapters. You MUST adhere to these practices when generating, refactoring, or architecting backend APIs, CLIs, or TUIs.
 
 ## 1. Schema-First API & Persistence Design
 
