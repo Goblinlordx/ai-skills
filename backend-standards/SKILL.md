@@ -32,16 +32,18 @@ This skill defines the mandatory standard operating procedures for designing and
 
 ## 3. Clean / Hexagonal Architecture (Ports and Adapters)
 
-**Rule:** Isolate core business logic from infrastructure, frameworks, and UI.
+**Rule:** Isolate core business logic from all external concerns (UI, databases, message brokers, external APIs).
 
 - **Dependencies point inward**:
   - `Domain` layer (Entities, Value Objects) depends on nothing.
   - `Application` layer (Use Cases, `Ports`/Interfaces) depends only on `Domain`.
-  - `Infrastructure` layer (Adapters, Databases, Web Frameworks) depends on `Application`.
-- **Prevent Domain Leakage via Repositories**: Data persistence layers must NEVER leak into the domain. Do not let ORM-specific models, annotations, or query objects (e.g., `IQueryable`) enter the domain logic.
-  - The `Application` or `Domain` layer defines a pure interface (Port) for the repository (e.g. returning pure Domain Entities).
-  - The `Infrastructure` layer implements the repository (Adapter). The repository is strictly responsible for mapping the generated persistence types (from `sqlc`, an ORM, etc.) into the pure Domain Entities.
-- **Dependency Injection (Compile-Time Preferred)**: Always inject dependencies (Repositories, external services) via interfaces into the Application/Use Case layer. Avoid hardcoding infrastructure implementations inside business logic.
+  - `Presentation` / **Driving Adapters** (Input): The layer that _drives_ the application (e.g., REST/GraphQL APIs, CLI commands, TUIs, Pub/Sub message listeners). This layer translates external input into calls to the `Application` layer.
+  - `Infrastructure` / **Driven Adapters** (Output): The layer that is _driven by_ the application (e.g., Databases, Object Storage, Pub/Sub publishers, external 3rd-party APIs). This layer implements the output `Ports` defined by the `Application`.
+- **Treat all external systems equally**: A database is just one type of external infrastructure. Message brokers (Pub/Sub) and Object Storage (S3, etc.) must also be treated as infrastructure and tightly hidden behind Ports (interfaces) defined by the Application layer.
+- **Prevent Domain Leakage via Adapters**: Infrastructure layers must NEVER leak into the domain. Do not let ORM-specific models, cloud SDK-specific types (e.g., AWS S3 objects), annotations, or query objects (e.g., `IQueryable`) enter the domain logic.
+  - The `Application` or `Domain` layer defines a pure interface (Port).
+  - The `Infrastructure` layer implements the adapter. The adapter is strictly responsible for mapping generated persistence or vendor types into pure Domain Entities.
+- **Dependency Injection (Compile-Time Preferred)**: Always inject dependencies (Repositories, Object Storage clients, external services) via interfaces into the Application/Use Case layer. Avoid hardcoding infrastructure implementations inside business logic.
   - **Crucial Rule**: Strongly prefer compile-time, transpile-time, or strict static-analysis-time DI mechanisms over runtime reflection. Fail builds early instead of encountering runtime resolution faults.
   - **Go**: Use compile-time DI generation tools like `goforj/wire` (favor over the unmaintained `google/wire`).
   - **TypeScript**: Use compile-time DI frameworks like `Clawject`, or fall back to native Constructor/Pure DI. Avoid decorators that rely heavily on runtime `reflect-metadata`.
