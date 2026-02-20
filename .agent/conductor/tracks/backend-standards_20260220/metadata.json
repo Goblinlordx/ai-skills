@@ -1,0 +1,16 @@
+{
+  "id": "backend-standards_20260220",
+  "title": "Backend Standards Skill",
+  "type": "feature",
+  "status": "in_progress",
+  "created": "2026-02-20T10:02:45+09:00",
+  "updated": "2026-02-20T10:02:45+09:00",
+  "phases": {
+    "total": 3,
+    "completed": 2
+  },
+  "tasks": {
+    "total": 10,
+    "completed": 8
+  }
+}
