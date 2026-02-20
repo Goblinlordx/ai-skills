@@ -1,4 +1,4 @@
-# Implementation Plan: Backend Standards Skill
+# Implementation Plan: Application Architecture Standards
 
 **Track ID:** backend-standards_20260220
 **Spec:** [spec.md](./spec.md)
@@ -16,7 +16,7 @@ Establish the core structure of the skill by researching best practices and comp
 ### Tasks
 
 - [x] Task 1.1: Research industry best practices for schema-first design, Code Generation, DDD (Domain-Driven Design), Clean/Hexagonal Architecture, and TDD (Test-Driven Development) in modern backend development (Go, TypeScript, Python).
-- [x] Task 1.2: Create the directory `backend-standards/` in the project root.
+- [x] Task 1.2: Create the directory `application-architecture-standards/` in the project root.
 - [x] Task 1.3: Outline the sections for DDD, TDD, and Clean/Hexagonal Architecture based on the research.
 - [x] Task 1.4: Outline the sections for schema-first design, code generation, dependency injection, and strong typing/boundary validation.
 
@@ -30,7 +30,7 @@ Translate the research and outlines into actionable, agent-facing instructions a
 
 ### Tasks
 
-- [x] Task 2.1: Write the YAML frontmatter for the `SKILL.md` (`name: backend-standards`, `description`, etc.).
+- [x] Task 2.1: Write the YAML frontmatter for the `SKILL.md` (`name: application-architecture-standards`, `description`, etc.).
 - [x] Task 2.2: Draft instructions for project setup using the predefined architectures (DDD, Clean Architecture) and TDD.
 - [x] Task 2.3: Draft instructions for the schema-first API and persistence layer design (including code generation).
 - [x] Task 2.4: Draft instructions for enforcing dependency injection, strong typing constraints, and system boundary validation.
