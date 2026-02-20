@@ -1,6 +1,6 @@
 ---
 name: application-architecture-standards
-description: Enforce strict application architecture standards including Schema-First design, Clean Architecture, Domain-Driven Design (DDD), and Test-Driven Development (TDD) for API, CLI, and TUI applications using Go, TypeScript, and Python.
+description: Enforce strict application architecture standards including Schema-First design, Clean Architecture, DDD, and TDD for core applications (API, CLI, TUI). Not intended for primarily presentation-only frontend web applications.
 metadata:
   version: "1.0"
 ---
