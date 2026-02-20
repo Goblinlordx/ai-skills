@@ -12,8 +12,6 @@ Navigation hub for project context.
 
 ## Active Tracks
 
-- [Backend Standards Skill (backend-standards_20260220)](./tracks/backend-standards_20260220/index.md)
-
 <!-- Auto-populated by /conductor-new-track -->
 
 ## Getting Started
