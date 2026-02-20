@@ -14,8 +14,10 @@ This skill defines the mandatory standard operating procedures for designing and
 **Rule:** Always define the contract before writing implementation code. The schema is the single source of truth.
 
 - **API Layer**: Define APIs using OpenAPI (Swagger) for REST or GraphQL SDL for GraphQL.
-- **Persistence Layer**: Define database schemas or migration standards before writing repository code.
-- **Code Generation**: Aggressively leverage code generation tools (e.g., `oapi-codegen` for Go, OpenAPI Generator for TypeScript/Python) to produce server stubs, models, and client SDKs directly from the schema.
+- **Persistence Layer**: Define database schemas (e.g. SQL migrations, Prisma schema, or equivalent) before writing database access code. You are not strictly required to use SQL, but the schema must be explicitly defined.
+- **Code Generation**: Aggressively leverage code generation tools to produce type-safe code directly from the schemas.
+  - For APIs: Use tools like `oapi-codegen` for Go, or OpenAPI Generator for TypeScript/Python.
+  - For Persistence: Use tools like `sqlc` for Go, Prisma for TypeScript, etc. to generate strict types and query functions from your schemas.
 - **Benefit**: Ensures parallel development, guarantees type safety across boundaries, and reduces boilerplate.
 
 ## 2. Domain-Driven Design (DDD)
@@ -35,6 +37,9 @@ This skill defines the mandatory standard operating procedures for designing and
   - `Domain` layer (Entities, Value Objects) depends on nothing.
   - `Application` layer (Use Cases, `Ports`/Interfaces) depends only on `Domain`.
   - `Infrastructure` layer (Adapters, Databases, Web Frameworks) depends on `Application`.
+- **Prevent Domain Leakage via Repositories**: Data persistence layers must NEVER leak into the domain. Do not let ORM-specific models, annotations, or query objects (e.g., `IQueryable`) enter the domain logic.
+  - The `Application` or `Domain` layer defines a pure interface (Port) for the repository (e.g. returning pure Domain Entities).
+  - The `Infrastructure` layer implements the repository (Adapter). The repository is strictly responsible for mapping the generated persistence types (from `sqlc`, an ORM, etc.) into the pure Domain Entities.
 - **Dependency Injection**: Always inject dependencies (Repositories, external services) via interfaces into the Application/Use Case layer. Avoid hardcoding infrastructure implementations inside business logic.
 
 ## 4. Strict Typing and Boundary Validation
