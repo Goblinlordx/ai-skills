@@ -18,7 +18,7 @@ This skill defines the mandatory standard operating procedures for designing and
 - **Migrations**: Ensure that proper schema and migration support tooling (e.g. `golang-migrate`, Prisma Migrations, Alembic) is integrated into the project _early_ so that the persistence layer can evolve safely over time.
 - **Code Generation**: Aggressively leverage code generation tools to produce type-safe code directly from the schemas.
   - For APIs: Use tools like `oapi-codegen` for Go, or OpenAPI Generator for TypeScript/Python.
-  - For Persistence: Use tools like `sqlc` for Go, `Prisma` for TypeScript, and `sqlacodegen` or `prisma-client-py` for Python to generate strict types and query functions from your schemas.
+  - For Persistence: Use `sqlc` for Go, `Prisma` for TypeScript, and `prisma-client-py` for Python to generate strict types and query functions from your schemas.
 - **Benefit**: Ensures parallel development, guarantees type safety across boundaries, and reduces boilerplate.
 
 ## 2. Domain-Driven Design (DDD)
@@ -54,7 +54,7 @@ This skill defines the mandatory standard operating procedures for designing and
 **Rule:** Catch errors at compile-time whenever possible; catch runtime errors at the system boundaries.
 
 - **Compile-Time Checks**: Use strong typing (TypeScript, Go, Python with `pyright`/type hints). Avoid `any`, `interface{}`, or dynamic typing unless absolutely impossible.
-- **Boundary Validation**: Validate all incoming data at the earliest point of entry (API controllers/handlers). If data passes the boundary, internal layers should trust it and rely on the strong typing system. Utilize runtime schema validators where appropriate (e.g., `typia` preferred or `zod` fallback for TS, `pydantic` for Python).
+- **Boundary Validation**: Validate all incoming data at the earliest point of entry (API controllers/handlers). If data passes the boundary, internal layers should trust it and rely on the strong typing system. Utilize runtime schema validators to guarantee this (e.g., `typia` for TS, `pydantic` for Python).
 
 ## 5. Test-Driven Development (TDD)
 
@@ -73,8 +73,8 @@ This skill defines the mandatory standard operating procedures for designing and
 - **Structured Format**: Always output logs in a structured format (e.g., JSON) to ensure they are easily searchable in log management systems.
 - **Logging as a Service**: Manage logging as an injected dependency. Define a logging interface (Port) in the Application layer and implement it in the Infrastructure layer. Avoid using global logging state or direct console/vendor imports inside core business logic.
 - **Language Recommendations**:
-  - **Go**: Use `slog` (standard library) or `uber-go/zap` for high-performance structured logging.
-  - **TypeScript**: Use `pino` (preferred for performance) or `winston`.
+  - **Go**: Use `slog` (standard library) for structured logging.
+  - **TypeScript**: Use `pino` for high-performance structured logging.
   - **Python**: Use `structlog` for easy structured logging.
 
 ---
