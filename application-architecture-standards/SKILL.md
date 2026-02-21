@@ -73,7 +73,7 @@ This skill defines the mandatory standard operating procedures for designing and
 - **Structured Format**: Always output logs in a structured format (e.g., JSON) to ensure they are easily searchable in log management systems.
 - **Logging as a Service**: Manage logging as an injected dependency. Define a logging interface (Port) in the Application layer and implement it in the Infrastructure layer. Avoid using global logging state or direct console/vendor imports inside core business logic.
 - **Language Recommendations**:
-  - **Go**: Use `slog` (standard library) for structured logging.
+  - **Go**: Use `zap` (Uber) for high-performance structured logging.
   - **TypeScript**: Use `pino` for high-performance structured logging.
   - **Python**: Use `structlog` for easy structured logging.
 
