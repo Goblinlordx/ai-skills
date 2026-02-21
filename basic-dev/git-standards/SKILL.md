@@ -66,3 +66,13 @@ By default, development should follow a Trunk-Based Development workflow. The pr
 - **Instruct the User:** When local commits are complete and a branch is ready for a PR/MR, you should state that the local work is complete and provide the exact push command for the user.
 - **Example Response:**
   > _"I have completed the work and committed it locally to the `feat/user-auth` branch. To proceed, please push this branch to the remote to open a PR by running: `git push -u origin feat/user-auth`. Let me know if you would like me to run this command for you."_
+
++## 4. Quality Assurance Before Commit
+
+- +Maintaining a healthy and buildable trunk is critical.
+- +**CRITICAL RULE**: Code MUST NEVER be committed locally unless all of the following checks pass:
+  +- **Linting**: No linting errors or warnings (per project configuration).
+  +- **Typechecking**: No static type errors (e.g., TypeScript, Go, Python type hints).
+  +- **Build**: The project builds successfully without errors.
+  +- **Tests**: All unit and integration tests must pass.
+- +**Exception**: You may ONLY bypass this rule if the user EXPLICITLY requests a commit despite one or more of these checks failing. In all other cases, you must fix the issues before committing.
