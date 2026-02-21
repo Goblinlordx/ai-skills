@@ -90,3 +90,14 @@ If a user asks to "Build a user registration endpoint":
 5. Implement the `RegisterUserUseCase` (Application Layer).
 6. Implement the `UserRepository` interface (Port) for the database (Adapter).
 7. Inject the repository into the Use Case and connect the generated HTTP handler to the Use Case.
+
+## 7. Pagination for List APIs
+
+**Rule:** All list-based APIs MUST support pagination by default unless explicitly waived by the user.
+
+- **Default Strategy:** Use **Cursor-Based Pagination** (`after`, `before`, `first`, `last`).
+- **Rationale:** Static offset-based pagination (`limit`/`offset`) suffers from significant performance degradation as the result set size increases ($O(N)$ vs $O(1)$ lookup) and is prone to data skipping or duplication when the underlying dataset changes.
+- **Schema Implementation**:
+  - Input parameters should include a cursor (e.g., `after: String`) and a page size (e.g., `first: Int`).
+  - Response objects should include the list of items AND pagination metadata (e.g., `hasNextPage`, `endCursor`).
+- **Typed Consistency**: Ensure generated API models (OpenAPI/GraphQL) strictly reflect these pagination structures.
