@@ -1,0 +1,18 @@
+{
+  "id": "frontend-architecture-standards_20260221",
+  "title": "Frontend Architecture Standards",
+  "type": "feature",
+  "status": "in_progress",
+  "created": "2026-02-21T17:29:00Z",
+  "updated": "2026-02-21T17:30:21Z",
+  "phases": {
+    "total": 4,
+    "completed": 4
+  },
+  "current_phase": 4,
+  "current_task": "4.2",
+  "tasks": {
+    "total": 13,
+    "completed": 13
+  }
+}
