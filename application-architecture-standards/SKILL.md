@@ -63,6 +63,20 @@ This skill defines the mandatory standard operating procedures for designing and
 - Focus primarily on testing the `Application` (Use Case) and `Domain` layers.
 - Because of Dependency Injection and Clean Architecture, mock out the `Infrastructure` layer (databases, external APIs) easily using generated mocks or lightweight stubs.
 
+## 6. Structured & Leveled Logging
+
+**Rule:** Implement logging as a structured, leveled service injected as a dependency.
+
+- **Leveled Logging**: Use appropriate log levels to balance observability and noise.
+  - `INFO`: Records high-level operational flow (e.g., "User registered", "Payment processed"). It must be concise and NOT verbose.
+  - `DEBUG`: Records detailed internal state for troubleshooting. Can be highly verbose.
+- **Structured Format**: Always output logs in a structured format (e.g., JSON) to ensure they are easily searchable in log management systems.
+- **Logging as a Service**: Manage logging as an injected dependency. Define a logging interface (Port) in the Application layer and implement it in the Infrastructure layer. Avoid using global logging state or direct console/vendor imports inside core business logic.
+- **Language Recommendations**:
+  - **Go**: Use `slog` (standard library) or `uber-go/zap` for high-performance structured logging.
+  - **TypeScript**: Use `pino` (preferred for performance) or `winston`.
+  - **Python**: Use `structlog` for easy structured logging.
+
 ---
 
 ### Execution Example
