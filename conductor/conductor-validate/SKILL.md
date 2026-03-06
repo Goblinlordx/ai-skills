@@ -66,8 +66,8 @@ ls .agent/conductor/index.md .agent/conductor/product.md .agent/conductor/tech-s
 
 ```
 
-<type>_<name>_<YYYYMMDD>
-Example: feature_user_auth_20250115
+<type>_<name>_<YYYYMMDDHHmmssZ>
+Example: feature_user_auth_20250115100000Z
 
 ```
 

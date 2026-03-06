@@ -62,17 +62,17 @@ Parse the argument format:
 
 **Full track:** `{trackId}`
 
-- Example: `auth_20250115`
+- Example: `auth_20250115100000Z`
 - Reverts all commits for the entire track
 
 **Specific phase:** `{trackId}:phase{N}`
 
-- Example: `auth_20250115:phase2`
+- Example: `auth_20250115100000Z:phase2`
 - Reverts commits for phase N and all subsequent phases
 
 **Specific task:** `{trackId}:task{X.Y}`
 
-- Example: `auth_20250115:task2.3`
+- Example: `auth_20250115100000Z:task2.3`
 - Reverts commits for task X.Y only
 
 ### If no argument:
@@ -83,12 +83,12 @@ Display guided selection menu:
 What would you like to revert?
 
 Currently In Progress:
-1. [~] Task 2.3 in dashboard_20250112 (most recent)
+1. [~] Task 2.3 in dashboard_20250112140000Z (most recent)
 
 Recently Completed:
-2. [x] Task 2.2 in dashboard_20250112 (1 hour ago)
-3. [x] Phase 1 in dashboard_20250112 (3 hours ago)
-4. [x] Full track: auth_20250115 (yesterday)
+2. [x] Task 2.2 in dashboard_20250112140000Z (1 hour ago)
+3. [x] Phase 1 in dashboard_20250112140000Z (3 hours ago)
+4. [x] Full track: auth_20250115100000Z (yesterday)
 
 Options:
 5. Enter specific reference (track:phase or track:task)
@@ -156,15 +156,15 @@ Before any revert operations, display full plan:
 Target: {description of what's being reverted}
 
 Commits to revert (in reverse chronological order):
-  1. abc1234 - feat: add chart rendering (dashboard_20250112)
-  2. def5678 - chore: mark task 2.3 complete (dashboard_20250112)
-  3. ghi9012 - feat: add data hooks (dashboard_20250112)
-  4. jkl3456 - chore: mark task 2.2 complete (dashboard_20250112)
+  1. abc1234 - feat: add chart rendering (dashboard_20250112140000Z)
+  2. def5678 - chore: mark task 2.3 complete (dashboard_20250112140000Z)
+  3. ghi9012 - feat: add data hooks (dashboard_20250112140000Z)
+  4. jkl3456 - chore: mark task 2.2 complete (dashboard_20250112140000Z)
 
 Files that will be affected:
   - src/components/Dashboard.tsx (modified)
   - src/hooks/useData.ts (will be deleted - was created in these commits)
-  - .agent/conductor/tracks/dashboard_20250112/plan.md (modified)
+  - .agent/conductor/tracks/dashboard_20250112140000Z/plan.md (modified)
 
 Plan updates:
   - Task 2.2: [x] -> [ ]

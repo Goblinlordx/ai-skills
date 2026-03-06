@@ -71,7 +71,7 @@ Read `.agent/conductor/tracks/{trackId}/plan.md`:
 Read `.agent/conductor/tracks/{trackId}/metadata.json`:
 
 - Track type (feature, bug, chore, refactor)
-- Created date
+- Created timestamp
 - Last updated date
 - Status
 
@@ -112,15 +112,15 @@ Progress:   [##########..........] {percentage}%
 
 | Status | Track ID          | Type    | Tasks      | Last Updated |
 |--------|-------------------|---------|------------|--------------|
-| [x]    | auth_20250110     | feature | 12/12 (100%)| 2025-01-12  |
-| [~]    | dashboard_20250112| feature | 7/15 (47%) | 2025-01-15  |
-| [ ]    | nav-fix_20250114  | bug     | 0/4 (0%)   | 2025-01-14  |
+| [x]    | auth_20250110093000Z     | feature | 12/12 (100%)| 2025-01-12T16:42:00Z |
+| [~]    | dashboard_20250112140000Z140000Z| feature | 7/15 (47%) | 2025-01-15T09:15:00Z |
+| [ ]    | nav-fix_20250114081500Z081500Z  | bug     | 0/4 (0%)   | 2025-01-14T08:15:00Z |
 
 --------------------------------------------------------------------------------
                               CURRENT FOCUS
 --------------------------------------------------------------------------------
 
-Active Track:  dashboard_20250112 - Dashboard Feature
+Active Track:  dashboard_20250112140000Z - Dashboard Feature
 Current Phase: Phase 2: Core Components
 Current Task:  [~] Task 2.3: Implement chart rendering
 
@@ -134,8 +134,8 @@ Progress in Phase:
                               NEXT ACTIONS
 --------------------------------------------------------------------------------
 
-1. Complete: Task 2.3 - Implement chart rendering (dashboard_20250112)
-2. Then: Task 2.4 - Add filter controls (dashboard_20250112)
+1. Complete: Task 2.3 - Implement chart rendering (dashboard_20250112140000Z)
+2. Then: Task 2.4 - Add filter controls (dashboard_20250112140000Z)
 3. After Phase 2: Phase verification checkpoint
 
 --------------------------------------------------------------------------------
@@ -143,7 +143,7 @@ Progress in Phase:
 --------------------------------------------------------------------------------
 
 {If blockers found:}
-! BLOCKED: Task 3.1 in dashboard_20250112 depends on api_20250111 (incomplete)
+! BLOCKED: Task 3.1 in dashboard_20250112140000Z depends on api_20250111090000Z (incomplete)
 
 {If no blockers:}
 No blockers identified.
@@ -162,8 +162,8 @@ Commands: /conductor:implement {trackId} | /conductor:new-track | /conductor:rev
 Track ID:    {trackId}
 Type:        {feature|bug|chore|refactor}
 Status:      {Pending|In Progress|Complete}
-Created:     {date}
-Updated:     {date}
+Created:     {YYYY-MM-DDTHH:MM:SSZ}
+Updated:     {YYYY-MM-DDTHH:MM:SSZ}
 
 --------------------------------------------------------------------------------
                               SPECIFICATION
@@ -266,9 +266,9 @@ Run /conductor:setup to initialize Conductor for this project.
 ERROR: Track not found: {argument}
 
 Available tracks:
-  - auth_20250115
-  - dashboard_20250112
-  - nav-fix_20250114
+  - auth_20250115100000Z
+  - dashboard_20250112140000Z
+  - nav-fix_20250114081500Z
 
 Usage: /conductor:status [track-id]
 ```

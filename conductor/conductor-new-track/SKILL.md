@@ -174,16 +174,17 @@ What could go wrong? Any risky changes?
 
 ## Track ID Generation
 
-Generate track ID in format: `{shortname}_{YYYYMMDD}`
+Generate track ID in format: `{shortname}_{YYYYMMDDHHmmssZ}`
 
 - Extract shortname from feature/bug summary (2-3 words, lowercase, hyphenated)
-- Use current date
-- Example: `user-auth_20250115`, `nav-bug_20250115`
+- Use current UTC date and time so creation time is encoded in the ID
+- The trailing `Z` explicitly marks UTC — always include it
+- Example: `user-auth_20250115143022Z`, `nav-bug_20250115091205Z`
 
 Validate uniqueness:
 
 - Check `.agent/conductor/tracks.md` for existing IDs
-- If collision, append counter: `user-auth_20250115_2`
+- If collision, append counter: `user-auth_20250115143022Z_2`
 
 ## Specification Generation
 
@@ -194,7 +195,7 @@ Create `.agent/conductor/tracks/{trackId}/spec.md`:
 
 **Track ID:** {trackId}
 **Type:** {Feature|Bug|Chore|Refactor}
-**Created:** {YYYY-MM-DD}
+**Created:** {YYYY-MM-DDTHH:MM:SSZ}
 **Status:** Draft
 
 ## Summary
@@ -262,7 +263,7 @@ After spec approval, generate `.agent/conductor/tracks/{trackId}/plan.md`:
 
 **Track ID:** {trackId}
 **Spec:** [spec.md](./spec.md)
-**Created:** {YYYY-MM-DD}
+**Created:** {YYYY-MM-DDTHH:MM:SSZ}
 **Status:** [ ] Not Started
 
 ## Overview
@@ -362,8 +363,8 @@ After plan approval:
      "title": "{Track Title}",
      "type": "feature|bug|chore|refactor",
      "status": "pending",
-     "created": "ISO_TIMESTAMP",
-     "updated": "ISO_TIMESTAMP",
+     "created": "YYYY-MM-DDTHH:MM:SSZ",
+     "updated": "YYYY-MM-DDTHH:MM:SSZ",
      "phases": {
        "total": N,
        "completed": 0
@@ -401,7 +402,7 @@ After plan approval:
 
 4. Register in `.agent/conductor/tracks.md`:
    - Add row to tracks table
-   - Format: `| [ ] | {trackId} | {title} | {created} | {created} |`
+   - Format: `| [ ] | {trackId} | {title} | {YYYY-MM-DDTHH:MM:SSZ} | {YYYY-MM-DDTHH:MM:SSZ} |`
 
 5. Update `.agent/conductor/index.md`:
    - Add track to "Active Tracks" section

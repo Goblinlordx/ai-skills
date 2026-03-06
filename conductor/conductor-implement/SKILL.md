@@ -57,11 +57,11 @@ Execute tasks from a track's implementation plan, following the workflow rules d
    Select a track to implement:
 
    In Progress:
-   1. [~] auth_20250115 - User Authentication (Phase 2, Task 3)
+   1. [~] auth_20250115100000Z - User Authentication (Phase 2, Task 3)
 
    Pending:
-   2. [ ] nav-fix_20250114 - Navigation Bug Fix
-   3. [ ] dashboard_20250113 - Dashboard Feature
+   2. [ ] nav-fix_20250114081500Z - Navigation Bug Fix
+   3. [ ] dashboard_20250113140000Z - Dashboard Feature
 
    Enter number or track ID:
    ```
@@ -335,7 +335,7 @@ Maintain progress in `metadata.json` throughout:
 
 ```json
 {
-  "id": "auth_20250115",
+  "id": "auth_20250115100000Z",
   "title": "User Authentication",
   "type": "feature",
   "status": "in_progress",
@@ -352,8 +352,8 @@ Maintain progress in `metadata.json` throughout:
     "completed": 7
   },
   "commits": [
-    "abc1234: feat: add login form (auth_20250115)",
-    "def5678: feat: add password validation (auth_20250115)"
+    "abc1234: feat: add login form (auth_20250115100000Z)",
+    "def5678: feat: add password validation (auth_20250115100000Z)"
   ]
 }
 ```
