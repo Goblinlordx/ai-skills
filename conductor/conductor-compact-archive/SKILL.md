@@ -91,14 +91,20 @@ and start a new compaction table under that declaration.
 rm -rf .agent/conductor/tracks/_archive/
 ```
 
-### Step 6: Commit
+### Step 6: Clean up tracks.md
+
+Remove all content under the `## Archived Tracks` section in `.agent/conductor/tracks.md`. This includes all batch archive entries added by `/conductor-bulk-archive`. The section header itself can be kept (empty) or removed — either is fine.
+
+This data is already preserved in `archive-compactions.md` and recoverable via git history, so keeping it in `tracks.md` would just be orphaned references to directories that no longer exist.
+
+### Step 7: Commit
 
 ```bash
-git add .agent/conductor/tracks/ .agent/conductor/archive-compactions.md
+git add .agent/conductor/tracks/ .agent/conductor/tracks.md .agent/conductor/archive-compactions.md
 git commit -m "chore: compact archive ({completed_count} completed, {uncompleted_count} uncompleted — recover from {HASH})"
 ```
 
-### Step 7: Report
+### Step 8: Report
 
 ```
 ================================================================================
