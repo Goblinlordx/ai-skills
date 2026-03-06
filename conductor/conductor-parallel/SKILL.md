@@ -101,10 +101,8 @@ Enter this role?
    - Record the main worktree path for later merge operations
    - Record the current branch as the **worker home branch** (this is where the worker returns between tracks)
 
-4. Verify merge lock scripts exist:
-   - Check `scripts/lock.sh` exists
-   - Check `scripts/merge-lock.sh` exists
-   - If missing: Display error — these scripts are **required** for safe parallel merges. The lock uses `mkdir` on `$GIT_COMMON_DIR/merge.lock/` as an atomic cross-worktree mutex with PID-based stale detection.
+4. Verify merge lock is not stale:
+   - The lock uses `mkdir` on `$GIT_COMMON_DIR/merge.lock/` as an atomic cross-worktree mutex. No external scripts required — the lock commands are inlined directly in Bash calls.
 
 ### Worker Loop
 
@@ -227,38 +225,23 @@ When the user says "merge" (or equivalent), execute this exact sequence:
 
 **CRITICAL: The entire rebase→verify→merge sequence MUST be protected by the merge lock.** This prevents concurrent merges from multiple workers.
 
-The lock uses `mkdir` on `$GIT_COMMON_DIR/merge.lock/` as an atomic cross-worktree mutex with PID-based stale detection. The lock scripts are at `scripts/lock.sh` and `scripts/merge-lock.sh`.
-
-**How to use the lock with Claude Code's Bash tool** (shell state does not persist between tool calls):
-
-Each Bash tool call gets a new PID, so you cannot `source` the scripts and call functions across separate tool calls. Instead, **inline the lock commands directly in each Bash call** using these helper variables:
-
-```bash
-LOCK_DIR="$(git rev-parse --git-common-dir)/merge.lock"
-```
+The lock uses `mkdir` on `$GIT_COMMON_DIR/merge.lock/` as an atomic cross-worktree mutex. `mkdir` is atomic — only one process can successfully create it. No spin-wait or PID-based stale detection (Claude Code Bash calls each get a new PID that dies immediately, making PID checks useless).
 
 **Acquire lock:**
 ```bash
 LOCK_DIR="$(git rev-parse --git-common-dir)/merge.lock"
-TIMEOUT=300; WAITED=0
-while ! mkdir "$LOCK_DIR" 2>/dev/null; do
-  if [ -f "$LOCK_DIR/pid" ]; then
-    OWNER=$(cat "$LOCK_DIR/pid" 2>/dev/null || echo "")
-    if [ -n "$OWNER" ] && ! kill -0 "$OWNER" 2>/dev/null; then
-      rm -rf "$LOCK_DIR"; continue
-    fi
-  fi
-  if [ "$WAITED" -ge "$TIMEOUT" ]; then echo "LOCK TIMEOUT"; exit 1; fi
-  sleep 1; WAITED=$((WAITED + 1))
-done
-echo $$ > "$LOCK_DIR/pid"
-echo "Merge lock acquired (PID $$)"
+if ! mkdir "$LOCK_DIR" 2>/dev/null; then
+  echo "MERGE LOCK HELD — Another worker is currently merging. Wait for them to finish."
+  exit 1
+fi
+echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) $(git branch --show-current)" > "$LOCK_DIR/info"
+echo "Merge lock acquired"
 ```
 
-- If lock acquired: continue to 5b
-- If lock times out (another worker is merging): report and **HALT**:
+- If lock acquired (`mkdir` succeeds): continue to 5b
+- If lock held (`mkdir` fails): report and **HALT**:
   ```
-  MERGE LOCK TIMEOUT — Another worker is currently merging.
+  MERGE LOCK HELD — Another worker is currently merging.
   Wait for them to finish, then retry.
   ```
 
@@ -512,6 +495,6 @@ Remove archived track directories from the working tree while preserving recover
 3. **ALWAYS verify after rebase** — run full verification after rebase incorporates main's changes, before merging
 4. **ALWAYS use --ff-only** — no merge commits, clean fast-forward only
 5. **ALWAYS reset after merge** — `git reset --hard main` before next track
-6. **ONE merge at a time** — acquire the merge lock (`merge_lock_acquire`) before rebase, release (`merge_lock_release`) after merge or on any failure. NEVER skip the lock.
+6. **ONE merge at a time** — acquire the merge lock (`mkdir $GIT_COMMON_DIR/merge.lock`) before rebase, release (`rm -rf` the lock dir) after merge or on any failure. NEVER skip the lock.
 7. **Follow workflow.md** — all TDD, commit, and verification rules apply
 8. **HALT on any failure** — do not attempt to continue past errors without user input
