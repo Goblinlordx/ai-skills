@@ -101,6 +101,11 @@ Enter this role?
    - Record the main worktree path for later merge operations
    - Record the current branch as the **worker home branch** (this is where the worker returns between tracks)
 
+4. Verify merge lock scripts exist:
+   - Check `scripts/lock.sh` exists
+   - Check `scripts/merge-lock.sh` exists
+   - If missing: Display error — these scripts are **required** for safe parallel merges. The lock uses `mkdir` on `$GIT_COMMON_DIR/merge.lock/` as an atomic cross-worktree mutex with PID-based stale detection.
+
 ### Worker Loop
 
 The worker repeats this cycle: **Select → Branch → Implement → Verify → Pause → Merge → Cleanup → Loop**
@@ -109,14 +114,26 @@ The worker repeats this cycle: **Select → Branch → Implement → Verify → 
 
 #### Step W1: Track Selection
 
-1. Read `.agent/conductor/tracks.md`
-2. Show available (incomplete) tracks **grouped by type**, with a refresh option and a prompt that accepts typing a track ID directly (since the list may be long):
+1. **Check what other workers are doing.** List all branches across worktrees to see which tracks are already claimed:
+   ```bash
+   git worktree list
+   git branch --list 'feature/*' 'bug/*' 'chore/*' 'refactor/*'
+   ```
+   Extract track IDs from branch names (e.g. `feature/auth_20250115100000Z` → `auth_20250115100000Z`). These tracks are **in progress** by other workers and should be marked as such.
+
+2. **Read track state from the local main branch head** — NOT from the current working tree. This ensures you see the latest committed state on main:
+   ```bash
+   git show main:.agent/conductor/tracks.md
+   ```
+   Use `git show main:<path>` for any track files you need to inspect (e.g. `git show main:.agent/conductor/tracks/{trackId}/metadata.json`).
+
+3. Show available (incomplete) tracks **grouped by type**, marking which ones are already being worked on by other workers. Include a refresh option and a prompt that accepts typing a track ID directly:
 
 ```
-Available tracks:
+Available tracks (from main):
 
 Features:
-  [~] auth_20250115100000Z - User Authentication (Phase 2, Task 3)
+  [~] auth_20250115100000Z - User Authentication (Phase 2, Task 3) ⚙ worker-2
   [ ] dashboard_20250113140000Z - Dashboard Feature
 
 Bugs:
@@ -125,22 +142,23 @@ Bugs:
 Chores:
   [ ] cleanup_20250120160000Z - Remove deprecated endpoints
 
-R. Refresh (reset to main and re-read tracks)
+⚙ = in progress by another worker (branch exists)
+
+R. Refresh (re-read from main)
 
 Type a track ID to select, or R to refresh:
 ```
 
-3. **If the user chooses "R" (refresh):** Reset the worker home branch to main and re-read tracks:
-   ```bash
-   git reset --hard main
-   ```
-   This gives the worker a clean slate matching the latest main, picking up any new tracks the coordinator committed. Then re-display the updated list and loop back to the top of Step W1. This is safe because the worker has not started implementation yet.
+4. **If the user chooses "R" (refresh):** Re-read tracks from main and re-display. No `git reset` needed since we read directly from main's HEAD.
 
-4. Once a track is selected, load its `metadata.json` to determine the track type (feature, bug, chore, refactor).
+5. Once a track is selected, read its `metadata.json` from main to determine the track type (feature, bug, chore, refactor):
+   ```bash
+   git show main:.agent/conductor/tracks/{trackId}/metadata.json
+   ```
 
 #### Step W1b: Create Implementation Branch
 
-Create a dedicated branch for this track based on main:
+Create a dedicated branch for this track based on main and switch to it:
 
 ```bash
 git checkout -b {type}/{trackId} main
@@ -148,7 +166,7 @@ git checkout -b {type}/{trackId} main
 
 Branch naming convention: `{type}/{trackId}` where type comes from the track's metadata (e.g. `feature/auth_20250115100000Z`, `bug/nav-fix_20250114081500Z`, `chore/cleanup_20250120160000Z`).
 
-Then load the track's context:
+Then load the track's context (now from the working tree, which is based on main):
    - `.agent/conductor/tracks/{trackId}/spec.md`
    - `.agent/conductor/tracks/{trackId}/plan.md`
    - `.agent/conductor/tracks/{trackId}/metadata.json`
@@ -183,77 +201,91 @@ git commit -m "chore: mark track {trackId} complete"
 
 **This is critical.** If `tracks.md` is not updated before merge, the completed track will appear stale/incomplete on main after the merge.
 
-#### Step W3: Automatic Verification
+#### Step W3: Pause — Report and Wait
 
-After the track is marked complete, run the **full verification suite** as defined in `.agent/conductor/workflow.md`.
-
-Run the verification commands from `workflow.md`:
-
-```bash
-# Step 1: Build + Unit Tests
-make test
-
-# Step 2: Full-stack E2E (Docker lifecycle + integration tests)
-make e2e
-```
-
-Run both steps. Collect results for each.
-
-#### Step W4: Pause — Report and Wait
-
-Present verification results and **STOP**:
+After marking the track complete, **STOP** and report:
 
 ```
 ================================================================================
-                    TRACK COMPLETE — VERIFICATION RESULTS
+                         TRACK COMPLETE — READY TO MERGE
 ================================================================================
 Track:      {trackId} - {title}
 Branch:     {worker-branch}
 Tasks:      {completed}/{total}
 
-Verification:
-  Build + Unit Tests (make test):  {PASS | FAIL: error summary}
-  E2E Tests (make e2e):            {PASS | FAIL: error summary}
-
-Overall:    {ALL PASS | FAILURES DETECTED}
-================================================================================
-
-{If ALL PASS:}
-Ready to merge. Waiting for coordinator to say "merge".
-
-{If FAILURES:}
-Verification failures detected. Fix issues before merging.
-Options:
-1. Attempt to fix failures
-2. Show failure details
-3. Wait for manual intervention
+Ready to merge. Say "merge" to begin the lock → rebase → verify → merge sequence.
 ================================================================================
 ```
 
 **CRITICAL: Do NOT proceed to merge automatically. Wait for the user (coordinator) to explicitly say "merge" or give a merge command.**
 
-If there are verification failures, help fix them and re-run verification before allowing merge.
-
 #### Step W5: Merge Sequence
 
 When the user says "merge" (or equivalent), execute this exact sequence:
 
-##### 5a. Rebase onto latest main
+##### 5a. Acquire the cross-worktree merge lock
+
+**CRITICAL: The entire rebase→verify→merge sequence MUST be protected by the merge lock.** This prevents concurrent merges from multiple workers.
+
+The lock uses `mkdir` on `$GIT_COMMON_DIR/merge.lock/` as an atomic cross-worktree mutex with PID-based stale detection. The lock scripts are at `scripts/lock.sh` and `scripts/merge-lock.sh`.
+
+**How to use the lock with Claude Code's Bash tool** (shell state does not persist between tool calls):
+
+Each Bash tool call gets a new PID, so you cannot `source` the scripts and call functions across separate tool calls. Instead, **inline the lock commands directly in each Bash call** using these helper variables:
 
 ```bash
-git rebase main
+LOCK_DIR="$(git rev-parse --git-common-dir)/merge.lock"
 ```
 
-- If rebase succeeds: continue to 5b
-- If rebase conflicts:
-  ```bash
-  git rebase --abort
-  ```
-  ```
-  REBASE CONFLICT — Cannot auto-merge.
+**Acquire lock:**
+```bash
+LOCK_DIR="$(git rev-parse --git-common-dir)/merge.lock"
+TIMEOUT=300; WAITED=0
+while ! mkdir "$LOCK_DIR" 2>/dev/null; do
+  if [ -f "$LOCK_DIR/pid" ]; then
+    OWNER=$(cat "$LOCK_DIR/pid" 2>/dev/null || echo "")
+    if [ -n "$OWNER" ] && ! kill -0 "$OWNER" 2>/dev/null; then
+      rm -rf "$LOCK_DIR"; continue
+    fi
+  fi
+  if [ "$WAITED" -ge "$TIMEOUT" ]; then echo "LOCK TIMEOUT"; exit 1; fi
+  sleep 1; WAITED=$((WAITED + 1))
+done
+echo $$ > "$LOCK_DIR/pid"
+echo "Merge lock acquired (PID $$)"
+```
 
-  Conflicting files:
-    {list of conflicting files}
+- If lock acquired: continue to 5b
+- If lock times out (another worker is merging): report and **HALT**:
+  ```
+  MERGE LOCK TIMEOUT — Another worker is currently merging.
+  Wait for them to finish, then retry.
+  ```
+
+**IMPORTANT: From this point on, if ANY step fails, you MUST release the lock before halting:**
+```bash
+LOCK_DIR="$(git rev-parse --git-common-dir)/merge.lock" && rm -rf "$LOCK_DIR"
+```
+
+##### 5b. Rebase onto latest main
+
+**Run rebase and release lock on failure in a single Bash call:**
+
+```bash
+LOCK_DIR="$(git rev-parse --git-common-dir)/merge.lock"
+if ! git rebase main; then
+  git rebase --abort 2>/dev/null || true
+  rm -rf "$LOCK_DIR"
+  echo "REBASE FAILED — lock released"
+  exit 1
+fi
+echo "Rebase succeeded"
+```
+
+- If rebase succeeds: continue to 5c (verify)
+- If rebase conflicts: the lock is released automatically. Report:
+  ```
+  REBASE CONFLICT — Cannot auto-merge. Lock released.
 
   Options:
   1. Show conflict details
@@ -262,53 +294,64 @@ git rebase main
   ```
   **HALT and wait for instructions.** Do NOT force through conflicts.
 
-##### 5b. Re-run full verification
+##### 5c. Post-rebase verification
 
-After rebase, main's changes are incorporated. Run the full verification suite again:
+After rebase, main's changes are incorporated. Run the full verification suite:
 
 ```bash
 make test
 make e2e
 ```
 
-- If all pass: continue to 5c
-- If failures:
+- If all pass: continue to 5d (merge)
+- If failures: **release the lock first:**
+  ```bash
+  LOCK_DIR="$(git rev-parse --git-common-dir)/merge.lock" && rm -rf "$LOCK_DIR"
   ```
-  POST-REBASE VERIFICATION FAILED
+  ```
+  POST-REBASE VERIFICATION FAILED — Lock released.
 
   The rebase incorporated changes from main that caused failures:
     {failure details}
 
   Options:
-  1. Attempt to fix
+  1. Attempt to fix (will need to re-acquire lock)
   2. Show failure details
   3. Abort merge and wait for manual intervention
   ```
   **HALT and wait for instructions.**
 
-##### 5c. Fast-forward merge into main
+##### 5d. Fast-forward merge into main, then release lock
 
-Use `git -C` to operate on the main worktree without changing directories:
+**Run merge and release lock in a single Bash call** to ensure atomicity:
 
 ```bash
-git -C {main-worktree-path} merge {type}/{trackId} --ff-only
+LOCK_DIR="$(git rev-parse --git-common-dir)/merge.lock"
+if git -C {main-worktree-path} merge {type}/{trackId} --ff-only; then
+  rm -rf "$LOCK_DIR"
+  echo "MERGE SUCCEEDED — lock released"
+else
+  rm -rf "$LOCK_DIR"
+  echo "MERGE FAILED — lock released"
+  exit 1
+fi
 ```
 
-- If merge succeeds (exit code 0): continue to 5d
-- If merge fails (not fast-forwardable):
+- If merge succeeds (exit code 0): continue to 5e
+- If merge fails (not fast-forwardable): lock is released automatically. Report:
   ```
-  MERGE FAILED — Branch is not fast-forwardable.
+  MERGE FAILED — Branch is not fast-forwardable. Lock released.
 
   This usually means main has advanced since the rebase.
   Another worker may have merged between rebase and merge.
 
   Options:
-  1. Re-run rebase and try again
+  1. Re-run from 5a (will re-acquire lock, re-rebase, and retry)
   2. Abort and wait for coordinator
   ```
   **HALT and wait for instructions.**
 
-##### 5d. Confirm merge, return to home branch, and clean up
+##### 5e. Confirm merge, return to home branch, and clean up
 
 ```bash
 # Verify merge succeeded by checking main's log
@@ -320,7 +363,7 @@ git checkout {worker-home-branch}
 # Reset home branch to main (pick up the merge + any other changes)
 git reset --hard main
 
-# Delete the implementation branch
+# Delete the implementation branch (safe — it's been merged)
 git branch -d {type}/{trackId}
 ```
 
@@ -358,10 +401,10 @@ Run /conductor-status to see project summary.
 
 - **Local branches only** — NEVER run `git push` in worker mode
 - **Always pause after verification** — never auto-merge
-- **Serial merges** — one merge at a time, coordinated by the user/coordinator
+- **Serial merges** — one merge at a time, enforced by the cross-worktree merge lock
 - **One branch per track** — create `{type}/{trackId}` from main, delete after merge
 - **Clean up after merge** — return to home branch, reset to main, delete implementation branch
-- **Verification is mandatory** — both before and after rebase
+- **Verification is mandatory** — run full suite after rebase, before merge
 
 ---
 
@@ -453,9 +496,10 @@ Remove archived track directories from the working tree while preserving recover
 | Conductor not initialized  | Display error, suggest `/conductor-setup`               |
 | Track not found            | Show available tracks, ask for correction               |
 | Verification failure       | Report details, offer fix/retry/wait                    |
-| Rebase conflict            | `git rebase --abort`, report conflicts, halt            |
-| Post-rebase verify failure | Report details, offer fix/retry/abort                   |
-| Merge not fast-forwardable | Report, offer re-rebase or abort                        |
+| Merge lock timeout         | Report, wait for other worker to finish, retry           |
+| Rebase conflict            | `git rebase --abort`, release lock, report conflicts, halt |
+| Post-rebase verify failure | Release lock, report details, offer fix/retry/abort      |
+| Merge not fast-forwardable | Release lock, report, offer re-rebase or abort           |
 | Git operation failure      | Show `git status`, report error, halt                   |
 | Worktree not found         | Verify `git worktree list`, suggest setup               |
 
@@ -465,9 +509,9 @@ Remove archived track directories from the working tree while preserving recover
 
 1. **NEVER push to remote** — all worker branches are local only
 2. **NEVER auto-merge** — always wait for explicit "merge" command
-3. **ALWAYS verify twice** — before pause AND after rebase
+3. **ALWAYS verify after rebase** — run full verification after rebase incorporates main's changes, before merging
 4. **ALWAYS use --ff-only** — no merge commits, clean fast-forward only
 5. **ALWAYS reset after merge** — `git reset --hard main` before next track
-6. **ONE merge at a time** — serial merge protocol prevents conflicts
+6. **ONE merge at a time** — acquire the merge lock (`merge_lock_acquire`) before rebase, release (`merge_lock_release`) after merge or on any failure. NEVER skip the lock.
 7. **Follow workflow.md** — all TDD, commit, and verification rules apply
 8. **HALT on any failure** — do not attempt to continue past errors without user input
