@@ -157,7 +157,7 @@ If missing: Display error and suggest `/conductor-setup`. **HALT.**
    ```
    **HALT.**
 
-### Step 4 — Confirm and enter developer mode
+### Step 4 — Enter developer mode
 
 ```
 ================================================================================
@@ -170,16 +170,14 @@ Type:     {type}
 Tasks:    {total tasks from plan.md}
 Phases:   {total phases}
 
-Ready to begin implementation. This will:
+Beginning implementation:
 1. Create branch {type}/{trackId} from main
 2. Implement all tasks following the plan
 3. Verify and prepare for merge
-
-Proceed?
 ================================================================================
 ```
 
-**Wait for user confirmation.**
+**Proceed immediately to Phase 2 (Setup).**
 
 Output the compaction anchor:
 ```
