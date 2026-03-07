@@ -432,49 +432,125 @@ When the user says "merge" (or immediately if `--auto-merge` / post-review-appro
 
 #### 11a. Acquire merge lock
 
+The merge lock supports two modes: **HTTP** (via crelay lock API) with automatic fallback to **mkdir** (local filesystem). The HTTP mode provides TTL-based crash recovery and server-side long-poll for `--auto-merge`.
+
+**Setup — determine lock mode and define helpers:**
+
+```bash
+RELAY_URL="${CRELAY_RELAY_URL:-http://localhost:3001}"
+HOLDER="$(basename $(pwd))"  # e.g., "developer-1"
+LOCK_MODE=""
+HEARTBEAT_PID=""
+
+# Check if relay lock API is available
+is_relay_running() {
+  curl -sf "$RELAY_URL/health" -o /dev/null 2>/dev/null
+}
+
+# Release lock (call on ANY failure after acquire)
+release_lock() {
+  if [ -n "$HEARTBEAT_PID" ]; then
+    kill $HEARTBEAT_PID 2>/dev/null; wait $HEARTBEAT_PID 2>/dev/null
+    HEARTBEAT_PID=""
+  fi
+  if [ "$LOCK_MODE" = "http" ]; then
+    curl -sf -X DELETE "$RELAY_URL/-/api/locks/merge" \
+      -H "Content-Type: application/json" \
+      -d "{\"holder\": \"$HOLDER\"}" 2>/dev/null || true
+  elif [ "$LOCK_MODE" = "mkdir" ]; then
+    rm -rf "$(git rev-parse --git-common-dir)/merge.lock"
+  fi
+  echo "Lock released (mode: ${LOCK_MODE:-none})"
+}
+
+# Start heartbeat in background (HTTP mode only)
+start_heartbeat() {
+  if [ "$LOCK_MODE" = "http" ]; then
+    while true; do
+      sleep 30
+      curl -sf -X POST "$RELAY_URL/-/api/locks/merge/heartbeat" \
+        -H "Content-Type: application/json" \
+        -d "{\"holder\": \"$HOLDER\", \"ttl_seconds\": 120}" 2>/dev/null || true
+    done &
+    HEARTBEAT_PID=$!
+  fi
+}
+```
+
 **Without `--auto-merge`:** Try once. If the lock is held, report and **HALT** — wait for the user to say "merge" to retry.
 
 ```bash
-LOCK_DIR="$(git rev-parse --git-common-dir)/merge.lock"
-if ! mkdir "$LOCK_DIR" 2>/dev/null; then
-  echo "MERGE LOCK HELD — Another worker is currently merging."
-  echo "Lock info: $(cat "$LOCK_DIR/info" 2>/dev/null || echo 'unknown')"
-  echo "Say 'merge' to retry."
-  exit 1
+if is_relay_running; then
+  # HTTP mode — non-blocking (timeout_seconds: 0)
+  if curl -sf -X POST "$RELAY_URL/-/api/locks/merge/acquire" \
+    -H "Content-Type: application/json" \
+    -d "{\"holder\": \"$HOLDER\", \"ttl_seconds\": 120, \"timeout_seconds\": 0}" \
+    -o /dev/null 2>/dev/null; then
+    LOCK_MODE="http"
+    echo "Merge lock acquired (HTTP)"
+  else
+    echo "MERGE LOCK HELD — Another worker is currently merging."
+    echo "Say 'merge' to retry."
+    exit 1
+  fi
+else
+  # mkdir fallback
+  LOCK_DIR="$(git rev-parse --git-common-dir)/merge.lock"
+  if ! mkdir "$LOCK_DIR" 2>/dev/null; then
+    echo "MERGE LOCK HELD — Another worker is currently merging."
+    echo "Lock info: $(cat "$LOCK_DIR/info" 2>/dev/null || echo 'unknown')"
+    echo "Say 'merge' to retry."
+    exit 1
+  fi
+  echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) $HOLDER" > "$LOCK_DIR/info" 2>/dev/null
+  LOCK_MODE="mkdir"
+  echo "Merge lock acquired (mkdir fallback — relay unavailable)"
 fi
-echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) $(git branch --show-current)" > "$LOCK_DIR/info"
-echo "Merge lock acquired"
+start_heartbeat
 ```
 
-**With `--auto-merge`:** Use a blocking retry loop that polls until the lock is acquired. You MUST use this loop — do not skip retries or proceed without the lock:
+**With `--auto-merge`:** Use blocking acquire. HTTP mode uses server-side long-poll (timeout_seconds: 300). mkdir mode uses a polling loop:
 
 ```bash
-LOCK_DIR="$(git rev-parse --git-common-dir)/merge.lock"
-ATTEMPT=0
-while ! mkdir "$LOCK_DIR" 2>/dev/null; do
-  ATTEMPT=$((ATTEMPT + 1))
-  echo "MERGE LOCK HELD — waiting for lock... (attempt $ATTEMPT)"
-  echo "Lock info: $(cat "$LOCK_DIR/info" 2>/dev/null || echo 'unknown')"
-  sleep 10
-done
-echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) $(git branch --show-current)" > "$LOCK_DIR/info"
-echo "Merge lock acquired after $ATTEMPT retries"
+if is_relay_running; then
+  # HTTP mode — blocking with server-side long-poll
+  if curl -sf -X POST "$RELAY_URL/-/api/locks/merge/acquire" \
+    -H "Content-Type: application/json" \
+    -d "{\"holder\": \"$HOLDER\", \"ttl_seconds\": 120, \"timeout_seconds\": 300}" \
+    --max-time 310 -o /dev/null 2>/dev/null; then
+    LOCK_MODE="http"
+    echo "Merge lock acquired (HTTP)"
+  else
+    echo "MERGE LOCK TIMEOUT — could not acquire after 300s"
+    exit 1
+  fi
+else
+  # mkdir fallback — polling loop
+  LOCK_DIR="$(git rev-parse --git-common-dir)/merge.lock"
+  ATTEMPT=0
+  while ! mkdir "$LOCK_DIR" 2>/dev/null; do
+    ATTEMPT=$((ATTEMPT + 1))
+    echo "MERGE LOCK HELD — waiting for lock... (attempt $ATTEMPT)"
+    echo "Lock info: $(cat "$LOCK_DIR/info" 2>/dev/null || echo 'unknown')"
+    sleep 10
+  done
+  echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) $HOLDER" > "$LOCK_DIR/info" 2>/dev/null
+  LOCK_MODE="mkdir"
+  echo "Merge lock acquired (mkdir fallback) after $ATTEMPT retries"
+fi
+start_heartbeat
 ```
 
-Run this as a single bash command with an appropriate timeout (e.g., 300 seconds). The loop will block until the lock is free.
+Run this as a single bash command with an appropriate timeout (e.g., 300 seconds). The HTTP long-poll replaces the sleep loop for faster acquisition.
 
-**From this point: release lock on ANY failure:**
-```bash
-LOCK_DIR="$(git rev-parse --git-common-dir)/merge.lock" && rm -rf "$LOCK_DIR"
-```
+**From this point: call `release_lock` on ANY failure.**
 
 #### 11b. Rebase onto latest main
 
 ```bash
-LOCK_DIR="$(git rev-parse --git-common-dir)/merge.lock"
 if ! git rebase main; then
   git rebase --abort 2>/dev/null || true
-  rm -rf "$LOCK_DIR"
+  release_lock
   echo "REBASE FAILED — lock released"
   exit 1
 fi
@@ -487,17 +563,16 @@ On conflict: lock released automatically. Report and **HALT**.
 
 Run the full verification suite from `workflow.md` (e.g., `make test`, `make e2e`).
 
-On failure: release lock, report, **HALT**.
+On failure: call `release_lock`, report, **HALT**.
 
 #### 11d. Fast-forward merge into main
 
 ```bash
-LOCK_DIR="$(git rev-parse --git-common-dir)/merge.lock"
 if git -C {main-worktree-path} merge {type}/{trackId} --ff-only; then
-  rm -rf "$LOCK_DIR"
+  release_lock
   echo "MERGE SUCCEEDED — lock released"
 else
-  rm -rf "$LOCK_DIR"
+  release_lock
   echo "MERGE FAILED — lock released"
   exit 1
 fi
@@ -569,6 +644,21 @@ Developer is ready for next track.
 | `--with-review` | After implementation: push, create PR, wait for review, then merge. Review approval implies merge authorization |
 | `--auto-merge --with-review` | Both: review cycle runs, and after approval merge proceeds without pause and polls lock |
 
+## Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `CRELAY_RELAY_URL` | `http://localhost:3001` | Relay server URL for HTTP lock API |
+
+## Merge Lock Modes
+
+The merge lock uses dual-mode acquisition:
+
+1. **HTTP mode** — Preferred when crelay relay is running. Uses TTL (120s), heartbeat (every 30s), and server-side long-poll for `--auto-merge`. Crash recovery via automatic TTL expiry.
+2. **mkdir mode** — Fallback when relay is unreachable. Uses `$(git rev-parse --git-common-dir)/merge.lock` directory. No TTL — requires manual cleanup on crashes.
+
+Detection is automatic: if `curl -sf $RELAY_URL/health` succeeds, HTTP mode is used.
+
 ## Critical Rules
 
 1. **ALWAYS validate before implementing** — never start work on an invalid or claimed track
@@ -577,8 +667,9 @@ Developer is ready for next track.
 4. **NEVER auto-merge unless `--auto-merge` or post-review-approval** — wait for explicit "merge" command
 5. **ALWAYS verify after rebase** — full verification after rebase, before merge
 6. **ALWAYS use --ff-only** — clean fast-forward merges only
-7. **ONE merge at a time** — enforce via cross-worktree merge lock
+7. **ONE merge at a time** — enforce via cross-worktree merge lock (HTTP preferred, mkdir fallback)
 8. **HALT on any failure** — do not continue past errors without user input
 9. **Follow workflow.md** — all TDD, commit, and verification rules apply
 10. **Return to home branch** — always checkout back to `developer-*` branch after merge
 11. **Clean up remote on merge** — if `--with-review`, delete remote branch and close PR after merge
+12. **ALWAYS send heartbeat** — start heartbeat after lock acquire, stop after release

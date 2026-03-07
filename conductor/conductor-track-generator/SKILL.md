@@ -174,6 +174,28 @@ Apply these splitting rules:
 - Order tracks by dependency (prerequisites first)
 - Note explicit dependencies between tracks in the spec
 
+#### Cross-track impact analysis (MANDATORY)
+
+Before generating specs, assess the **full dependency graph** — not just between new tracks, but against ALL existing pending tracks.
+
+**Prefer subagents for this analysis when available.** If the Agent tool is available, spawn a subagent for each pending/in-progress track to check file and package overlaps in parallel. This is mechanical work (reading specs, checking import paths, comparing file lists) that doesn't require the primary model's full reasoning. The subagent should return a brief structured report: `{trackId, overlapping_files[], overlapping_packages[], conflict_level: high|medium|low, notes}`. If subagents are not available, perform the same analysis directly — the assessment is mandatory regardless of tooling.
+
+1. **Read `tracks.md`** — identify all pending (`[ ]`) and in-progress (`[~]`) tracks
+2. **For each pending/in-progress track**, spawn a subagent to check if the new work:
+   - **Touches the same files or packages** → the new track either blocks or is blocked by the existing one
+   - **Renames, moves, or restructures code** the existing track depends on → the new track **blocks** the existing track (or vice versa)
+   - **Adds interfaces or contracts** that existing tracks should adopt → note as a soft dependency
+3. **For refactoring tracks** that rename packages or move files:
+   - These are **high-conflict** — they should either run **before** all feature work (so features build on the new structure) or **after** (so they don't invalidate in-flight work)
+   - Prefer running refactors **before** new features when no feature tracks are in-progress
+   - If feature tracks ARE in-progress, explicitly note in the spec: "This track should not start until tracks X, Y, Z are merged"
+4. **Document in the spec**:
+   - `## Dependencies` — tracks that must complete BEFORE this one
+   - `## Blockers` — tracks that should NOT start until this one completes (reverse dependencies)
+   - `## Conflict Risk` — tracks that touch the same files and may cause merge conflicts if run concurrently
+
+This analysis is **not optional** — it prevents merge conflicts, wasted work, and developer frustration. The track generator must assess impact on every pending track, not just the new ones being created.
+
 ### Step 8 — Generate track specifications
 
 For each track, generate the full specification following the same format as `/conductor-new-track`:
@@ -377,30 +399,86 @@ If main has advanced:
 
 #### 12a. Acquire the cross-worktree merge lock
 
+The merge lock supports two modes: **HTTP** (via crelay lock API) with automatic fallback to **mkdir** (local filesystem).
+
+**Setup — determine lock mode and define helpers:**
+
 ```bash
-LOCK_DIR="$(git rev-parse --git-common-dir)/merge.lock"
-if ! mkdir "$LOCK_DIR" 2>/dev/null; then
-  echo "MERGE LOCK HELD — Another worker is currently merging. Wait for them to finish."
-  exit 1
+RELAY_URL="${CRELAY_RELAY_URL:-http://localhost:3001}"
+HOLDER="$(basename $(pwd))"  # e.g., "track-generator-1"
+LOCK_MODE=""
+HEARTBEAT_PID=""
+
+is_relay_running() {
+  curl -sf "$RELAY_URL/health" -o /dev/null 2>/dev/null
+}
+
+release_lock() {
+  if [ -n "$HEARTBEAT_PID" ]; then
+    kill $HEARTBEAT_PID 2>/dev/null; wait $HEARTBEAT_PID 2>/dev/null
+    HEARTBEAT_PID=""
+  fi
+  if [ "$LOCK_MODE" = "http" ]; then
+    curl -sf -X DELETE "$RELAY_URL/-/api/locks/merge" \
+      -H "Content-Type: application/json" \
+      -d "{\"holder\": \"$HOLDER\"}" 2>/dev/null || true
+  elif [ "$LOCK_MODE" = "mkdir" ]; then
+    rm -rf "$(git rev-parse --git-common-dir)/merge.lock"
+  fi
+  echo "Lock released (mode: ${LOCK_MODE:-none})"
+}
+
+start_heartbeat() {
+  if [ "$LOCK_MODE" = "http" ]; then
+    while true; do
+      sleep 30
+      curl -sf -X POST "$RELAY_URL/-/api/locks/merge/heartbeat" \
+        -H "Content-Type: application/json" \
+        -d "{\"holder\": \"$HOLDER\", \"ttl_seconds\": 120}" 2>/dev/null || true
+    done &
+    HEARTBEAT_PID=$!
+  fi
+}
+```
+
+**Acquire (try once, HALT if held):**
+
+```bash
+if is_relay_running; then
+  if curl -sf -X POST "$RELAY_URL/-/api/locks/merge/acquire" \
+    -H "Content-Type: application/json" \
+    -d "{\"holder\": \"$HOLDER\", \"ttl_seconds\": 120, \"timeout_seconds\": 0}" \
+    -o /dev/null 2>/dev/null; then
+    LOCK_MODE="http"
+    echo "Merge lock acquired (HTTP)"
+  else
+    echo "MERGE LOCK HELD — Another worker is currently merging. Wait for them to finish."
+    exit 1
+  fi
+else
+  LOCK_DIR="$(git rev-parse --git-common-dir)/merge.lock"
+  if ! mkdir "$LOCK_DIR" 2>/dev/null; then
+    echo "MERGE LOCK HELD — Another worker is currently merging. Wait for them to finish."
+    echo "Lock info: $(cat "$LOCK_DIR/info" 2>/dev/null || echo 'unknown')"
+    exit 1
+  fi
+  echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) $HOLDER" > "$LOCK_DIR/info" 2>/dev/null
+  LOCK_MODE="mkdir"
+  echo "Merge lock acquired (mkdir fallback — relay unavailable)"
 fi
-echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) $(git branch --show-current)" > "$LOCK_DIR/info"
-echo "Merge lock acquired"
+start_heartbeat
 ```
 
 If lock held: report and **HALT** (wait for other worker to finish, then retry).
 
-**From this point: release lock on ANY failure:**
-```bash
-LOCK_DIR="$(git rev-parse --git-common-dir)/merge.lock" && rm -rf "$LOCK_DIR"
-```
+**From this point: call `release_lock` on ANY failure.**
 
 #### 12b. Rebase onto latest main
 
 ```bash
-LOCK_DIR="$(git rev-parse --git-common-dir)/merge.lock"
 if ! git rebase main; then
   git rebase --abort 2>/dev/null || true
-  rm -rf "$LOCK_DIR"
+  release_lock
   echo "REBASE FAILED — lock released"
   exit 1
 fi
@@ -419,12 +497,11 @@ On conflict: This likely means a track state conflict. Release lock, report the 
 **No test verification needed** — track generator only modifies `.agent/conductor/` artifacts.
 
 ```bash
-LOCK_DIR="$(git rev-parse --git-common-dir)/merge.lock"
 if git -C {main-worktree-path} merge $(git branch --show-current) --ff-only; then
-  rm -rf "$LOCK_DIR"
+  release_lock
   echo "MERGE SUCCEEDED — lock released"
 else
-  rm -rf "$LOCK_DIR"
+  release_lock
   echo "MERGE FAILED — lock released"
   exit 1
 fi
@@ -495,4 +572,20 @@ The track generator is responsible for maintaining track state correctness. This
 8. **ALWAYS read state from main** — use `git show main:<path>` for track statuses
 9. **NEVER overwrite existing track states** — main's state for existing tracks is authoritative
 10. **NEVER push to remote** — all operations are local only
-11. **ONE merge at a time** — enforce via cross-worktree merge lock
+11. **ONE merge at a time** — enforce via cross-worktree merge lock (HTTP preferred, mkdir fallback)
+12. **ALWAYS send heartbeat** — start heartbeat after lock acquire, stop after release
+
+## Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `CRELAY_RELAY_URL` | `http://localhost:3001` | Relay server URL for HTTP lock API |
+
+## Merge Lock Modes
+
+The merge lock uses dual-mode acquisition:
+
+1. **HTTP mode** — Preferred when crelay relay is running. Uses TTL (120s), heartbeat (every 30s), and server-side long-poll. Crash recovery via automatic TTL expiry.
+2. **mkdir mode** — Fallback when relay is unreachable. Uses `$(git rev-parse --git-common-dir)/merge.lock` directory. No TTL — requires manual cleanup on crashes.
+
+Detection is automatic: if `curl -sf $RELAY_URL/health` succeeds, HTTP mode is used.
