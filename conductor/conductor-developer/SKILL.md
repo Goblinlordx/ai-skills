@@ -432,24 +432,36 @@ When the user says "merge" (or immediately if `--auto-merge` / post-review-appro
 
 #### 11a. Acquire merge lock
 
+**Without `--auto-merge`:** Try once. If the lock is held, report and **HALT** — wait for the user to say "merge" to retry.
+
 ```bash
 LOCK_DIR="$(git rev-parse --git-common-dir)/merge.lock"
 if ! mkdir "$LOCK_DIR" 2>/dev/null; then
   echo "MERGE LOCK HELD — Another worker is currently merging."
+  echo "Lock info: $(cat "$LOCK_DIR/info" 2>/dev/null || echo 'unknown')"
+  echo "Say 'merge' to retry."
   exit 1
 fi
 echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) $(git branch --show-current)" > "$LOCK_DIR/info"
 echo "Merge lock acquired"
 ```
 
-**If lock is held:**
+**With `--auto-merge`:** Use a blocking retry loop that polls until the lock is acquired. You MUST use this loop — do not skip retries or proceed without the lock:
 
-- **Without `--auto-merge`:** Report and **HALT**. Wait for user to say "merge" again.
-- **With `--auto-merge`:** Wait and retry. Poll the lock every 10 seconds (using `sleep 10` + retry loop). Log each retry:
-  ```
-  MERGE LOCK HELD — waiting for lock... (attempt {N})
-  ```
-  Continue retrying until the lock is acquired. There is no timeout — the lock will be released when the other worker finishes. Once acquired, proceed normally.
+```bash
+LOCK_DIR="$(git rev-parse --git-common-dir)/merge.lock"
+ATTEMPT=0
+while ! mkdir "$LOCK_DIR" 2>/dev/null; do
+  ATTEMPT=$((ATTEMPT + 1))
+  echo "MERGE LOCK HELD — waiting for lock... (attempt $ATTEMPT)"
+  echo "Lock info: $(cat "$LOCK_DIR/info" 2>/dev/null || echo 'unknown')"
+  sleep 10
+done
+echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) $(git branch --show-current)" > "$LOCK_DIR/info"
+echo "Merge lock acquired after $ATTEMPT retries"
+```
+
+Run this as a single bash command with an appropriate timeout (e.g., 300 seconds). The loop will block until the lock is free.
 
 **From this point: release lock on ANY failure:**
 ```bash
