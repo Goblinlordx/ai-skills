@@ -30,7 +30,7 @@ Reports are written to `.agent/conductor/_reports/` as markdown files.
 1. Verify Conductor is initialized:
    - Check `.agent/conductor/product.md` exists
    - Check `.agent/conductor/tracks.md` exists
-   - If missing: Display error and suggest running `/conductor:setup` first
+   - If missing: Display error and suggest running `/conductor-setup` first
 
 2. Verify git repository:
    - Run `git rev-parse --is-inside-work-tree`
@@ -545,7 +545,7 @@ If a report for today already exists, overwrite it (reports are regenerated snap
 
 ### Conductor Not Initialized
 
-Display error and suggest: `Run /conductor:setup to initialize Conductor for this project.`
+Display error and suggest: `Run /conductor-setup to initialize Conductor for this project.`
 
 ### No Git History
 

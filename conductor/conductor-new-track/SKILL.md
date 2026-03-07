@@ -32,7 +32,7 @@ Create a new track (feature, bug fix, chore, or refactor) with a detailed specif
    - Check `.agent/conductor/product.md` exists
    - Check `.agent/conductor/tech-stack.md` exists
    - Check `.agent/conductor/workflow.md` exists
-   - If missing: Display error and suggest running `/conductor:setup` first
+   - If missing: Display error and suggest running `/conductor-setup` first
 
 2. Load context files:
    - Read `.agent/conductor/product.md` for product context
@@ -423,8 +423,8 @@ Files created:
 
 Next steps:
 1. Review spec.md and plan.md, make any edits
-2. Run /conductor:implement {trackId} to start implementation
-3. Run /conductor:status to see project progress
+2. Run /conductor-implement {trackId} to start implementation
+3. Run /conductor-status to see project progress
 ```
 
 ## Error Handling

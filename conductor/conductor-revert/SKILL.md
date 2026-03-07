@@ -30,7 +30,7 @@ Revert changes by logical work unit with full git awareness. Supports reverting 
 
 1. Verify Conductor is initialized:
    - Check `.agent/conductor/tracks.md` exists
-   - If missing: Display error and suggest running `/conductor:setup` first
+   - If missing: Display error and suggest running `/conductor-setup` first
 
 2. Verify git repository:
    - Run `git status` to confirm git repo

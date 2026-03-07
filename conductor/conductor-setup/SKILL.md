@@ -316,11 +316,11 @@ Navigation hub for project context.
 
 ## Active Tracks
 
-<!-- Auto-populated by /conductor:new-track -->
+<!-- Auto-populated by /conductor-new-track -->
 
 ## Getting Started
 
-Run `/conductor:new-track` to create your first feature track.
+Run `/conductor-new-track` to create your first feature track.
 ```
 
 ### 2. .agent/conductor/product.md
@@ -368,7 +368,7 @@ Template populated with:
 | Status | Track ID | Title | Created | Updated |
 | ------ | -------- | ----- | ------- | ------- |
 
-<!-- Tracks registered by /conductor:new-track -->
+<!-- Tracks registered by /conductor-new-track -->
 ```
 
 ### 7. .agent/conductor/code_styleguides/
@@ -406,7 +406,7 @@ When all files are created:
 
    Next steps:
    1. Review generated files and customize as needed
-   2. Run /conductor:new-track to create your first track
+   2. Run /conductor-new-track to create your first track
    ```
 
 ## Resume Handling

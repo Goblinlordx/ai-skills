@@ -31,7 +31,7 @@ Display the current status of the Conductor project, including overall progress,
 1. Verify Conductor is initialized:
    - Check `.agent/conductor/product.md` exists
    - Check `.agent/conductor/tracks.md` exists
-   - If missing: Display error and suggest running `/conductor:setup` first
+   - If missing: Display error and suggest running `/conductor-setup` first
 
 2. Check for any tracks:
    - Read `.agent/conductor/tracks.md`
@@ -149,7 +149,7 @@ Progress in Phase:
 No blockers identified.
 
 ================================================================================
-Commands: /conductor:implement {trackId} | /conductor:new-track | /conductor:revert
+Commands: /conductor-implement {trackId} | /conductor-new-track | /conductor-revert
 ================================================================================
 ```
 
@@ -217,7 +217,7 @@ Related Commits:
 3. Phase 2 verification pending
 
 ================================================================================
-Commands: /conductor:implement {trackId} | /conductor:revert {trackId}
+Commands: /conductor-implement {trackId} | /conductor-revert {trackId}
 ================================================================================
 ```
 
@@ -245,7 +245,7 @@ Legend:
 Conductor is set up but no tracks have been created yet.
 
 To get started:
-  /conductor:new-track "your feature description"
+  /conductor-new-track "your feature description"
 
 ================================================================================
 ```
@@ -257,7 +257,7 @@ ERROR: Conductor not initialized
 
 Could not find .agent/conductor/product.md
 
-Run /conductor:setup to initialize Conductor for this project.
+Run /conductor-setup to initialize Conductor for this project.
 ```
 
 ### Track Not Found (with argument)
@@ -270,7 +270,7 @@ Available tracks:
   - dashboard_20250112140000Z
   - nav-fix_20250114081500Z
 
-Usage: /conductor:status [track-id]
+Usage: /conductor-status [track-id]
 ```
 
 ## Calculation Logic

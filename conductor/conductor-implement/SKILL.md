@@ -32,7 +32,7 @@ Execute tasks from a track's implementation plan, following the workflow rules d
    - Check `.agent/conductor/product.md` exists
    - Check `.agent/conductor/workflow.md` exists
    - Check `.agent/conductor/tracks.md` exists
-   - If missing: Display error and suggest running `/conductor:setup` first
+   - If missing: Display error and suggest running `/conductor-setup` first
 
 2. Load workflow configuration:
    - Read `.agent/conductor/workflow.md`
@@ -325,8 +325,8 @@ Summary:
 - Tests: All passing
 
 Next steps:
-- Run /conductor:status to see project progress
-- Run /conductor:new-track for next feature
+- Run /conductor-status to see project progress
+- Run /conductor-new-track for next feature
 ```
 
 ## Progress Tracking
