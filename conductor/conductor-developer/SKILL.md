@@ -2,7 +2,7 @@
 name: conductor-developer
 description: Receive a track ID, validate it is an active unclaimed track, then implement it following the conductor workflow. Worker role in the track generation => approval => push to worker pipeline.
 metadata:
-  argument-hint: "<track-id>"
+  argument-hint: "<track-id> [--auto-merge]"
 ---
 
 # Conductor Developer
@@ -256,7 +256,9 @@ git commit -m "chore: mark track {trackId} complete"
 
 ## Phase 4: Merge
 
-### Step 10 — Report completion and wait
+### Step 10 — Report completion and wait (or auto-merge)
+
+If `--auto-merge` was **not** provided:
 
 ```
 ================================================================================
@@ -270,25 +272,34 @@ Ready to merge. Say "merge" to begin the lock -> rebase -> verify -> merge seque
 ================================================================================
 ```
 
-**CRITICAL: Do NOT proceed to merge automatically. Wait for explicit "merge" command.**
+**Wait for explicit "merge" command before proceeding.**
+
+If `--auto-merge` **was** provided: skip the pause and proceed directly to the merge sequence.
 
 ### Step 11 — Merge sequence
 
-When the user says "merge", execute the full merge protocol:
+When the user says "merge" (or immediately if `--auto-merge`), execute the full merge protocol:
 
 #### 11a. Acquire merge lock
 
 ```bash
 LOCK_DIR="$(git rev-parse --git-common-dir)/merge.lock"
 if ! mkdir "$LOCK_DIR" 2>/dev/null; then
-  echo "MERGE LOCK HELD — Another worker is currently merging. Wait for them to finish."
+  echo "MERGE LOCK HELD — Another worker is currently merging."
   exit 1
 fi
 echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) $(git branch --show-current)" > "$LOCK_DIR/info"
 echo "Merge lock acquired"
 ```
 
-If lock held: report and **HALT**.
+**If lock is held:**
+
+- **Without `--auto-merge`:** Report and **HALT**. Wait for user to say "merge" again.
+- **With `--auto-merge`:** Wait and retry. Poll the lock every 10 seconds (using `sleep 10` + retry loop). Log each retry:
+  ```
+  MERGE LOCK HELD — waiting for lock... (attempt {N})
+  ```
+  Continue retrying until the lock is acquired. There is no timeout — the lock will be released when the other worker finishes. Once acquired, proceed normally.
 
 **From this point: release lock on ANY failure:**
 ```bash
