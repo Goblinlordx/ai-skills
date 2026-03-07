@@ -235,7 +235,7 @@ Follow the exact same implementation workflow as `/conductor-implement`:
 - Update `plan.md` task markers: `[ ]` -> `[~]` -> `[x]`
 - Update `metadata.json` as tasks complete
 - Run phase verification at the end of each phase
-- **Wait for user approval between phases**
+- **Do NOT pause between phases** — proceed continuously through all phases without waiting for user approval
 
 ### Step 9 — Mark track complete
 
